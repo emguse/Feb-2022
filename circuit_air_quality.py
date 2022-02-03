@@ -29,13 +29,31 @@ class OnbordNeopix():
         self.pixel[0] = colorwheel(self.color_step & 255)
         self.pixel.show()
 
+class AirQuality():
+    def __init__(self, i2c):
+        self.bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
+        self.ccs811 = adafruit_ccs811.CCS811(i2c)
+    def tmp_read(self):
+        return ("Tmp: %0.1f C" % self.bme280.temperature)
+    def hum_read(self):
+        return ("Hum: %0.1f %%" % self.bme280.relative_humidity)
+    def prs_read(self):
+        return ("Prs: %0.1f hPa" % self.bme280.pressure)
+    def alt_read(self):
+        return ("Alt: %0.2f m" % self.bme280.altitude)
+    def eco2_read(self):
+        return (self.ccs811.eco2)
+    def tvoc_read(self):
+        return (self.ccs811.tvoc)
+
 def main():
     displayio.release_displays()
     onbord_neopix = OnbordNeopix()
 
     i2c = busio.I2C(board.GP3, board.GP2)
-    bme280 = adafruit_bme280.Adafruit_BME280_I2C(i2c)
-    ccs811 = adafruit_ccs811.CCS811(i2c)
+
+    air = AirQuality(i2c)
+
     display_bus = displayio.I2CDisplay(i2c, device_address=0x3c)
     display = adafruit_displayio_sh1107.SH1107(display_bus, width=128, height=64, rotation=0)
     
@@ -56,32 +74,32 @@ def main():
             past_time_onbord_neopix = time.monotonic()
         
         if t - past_time_measure >= 3:
-            tmp = ("Tmp: %0.1f C" % bme280.temperature)
+            tmp = air.tmp_read()
             print(tmp)
             text_area1 = label.Label(terminalio.FONT, text=tmp)
             text_area1.x = 10
             text_area1.y = 10
 
-            hum = ("Hum: %0.1f %%" % bme280.relative_humidity)
+            hum = air.hum_read()
             print(hum)
             text_area2 = label.Label(terminalio.FONT, text=hum)
             text_area2.x = 10
             text_area2.y = 20
 
-            prs = ("Prs: %0.1f hPa" % bme280.pressure)
+            prs = air.prs_read()
             print(prs)
             text_area3 = label.Label(terminalio.FONT, text=prs)
             text_area3.x = 10
             text_area3.y = 30
 
-            alt = ("Alt: %0.2f m" % bme280.altitude)
+            alt = air.alt_read()
             print(alt)
             text_area4 = label.Label(terminalio.FONT, text=alt)
             text_area4.x = 10
             text_area4.y = 40
         
-            eco2 = (ccs811.eco2)
-            tvoc = (ccs811.tvoc)
+            eco2 = air.eco2_read()
+            tvoc = air.tvoc_read()
             print("CO2: " + str(eco2) + " PPM")
             print("TVOC: " + str(tvoc) + " PPM")
             txt5 = ("CO2:" + str(eco2) + ",TVOC:"+str(tvoc))
