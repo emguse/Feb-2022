@@ -4,7 +4,7 @@ import time
 from adafruit_bus_device.i2c_device import I2CDevice
 
 '''
-- 2022/02/07 ver.0.01
+- 2022/02/08 ver.0.02
 - Author : emguse
 - License: MIT License
 '''
@@ -15,12 +15,13 @@ def CRC(data):
     crc = 0xFF
     for s in data:
         crc ^= s
-    for i in range(8):
-        if crc & 0x80:
-            crc <<= 1
-            crc ^= 0x131
-        else:
-            crc <<= 1
+        for i in range(8):
+            if crc & 0x80:
+                crc <<= 1
+                crc ^= 0x31
+            else:
+                crc <<= 1
+    crc = crc & 0xFF
     return crc
 
 class TemperatureHumiditySensorSHT35():
@@ -36,11 +37,11 @@ class TemperatureHumiditySensorSHT35():
         temperature = raw[0] * 256 + raw[1]
         celsius = -45 + (175 * temperature / 65535.0)
         humidity = 100 * (raw[3] * 256 + raw[4]) / 65535.0
-        #if raw[2] != CRC(raw[:2]):
-        #    print(raw[2])
-        #    raise RuntimeError("temperature CRC mismatch")
-        #if raw[5] != CRC(raw[3:5]):
-        #    raise RuntimeError("humidity CRC mismatch")
+        if raw[2] != CRC(raw[:2]):
+            print(raw[2])
+            raise RuntimeError("temperature CRC mismatch")
+        if raw[5] != CRC(raw[3:5]):
+            raise RuntimeError("humidity CRC mismatch")
         return celsius, humidity
 
 
