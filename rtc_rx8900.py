@@ -214,12 +214,15 @@ class RealTimeClockRX8900():
     def _read_single_bit(self, addr, num_bits):
         bitmask = 0x01 << num_bits
         reg = self._read_from_addr(addr, 1)
-        bits = reg & bitmask >> num_bits
+        bits = (reg & bitmask) >> num_bits
         return bits
     def _set_single_bit(self, addr, num_bits, value):
+        '''num_bits: 76543210 '''
         bitmask = ~(0x01 << num_bits) & 0xFF
+        value_to_set = value << num_bits
+        Prepared_value = bitmask | value_to_set
         evacuation = self._read_from_addr(addr, 1)
-        
+        self._write(addr, Prepared_value & evacuation)
     def datetime(self):
         t = self._bcd_to_struct(self._read_from_addr(_SEC_REG, 7))
         return t
@@ -320,6 +323,7 @@ class RealTimeClockRX8900():
                 bcd += int(str_s[d-1]) << d * 4
             a.append(bcd)
         return a
+
 
 def main():
     i2c = busio.I2C(board.GP9, board.GP8)
