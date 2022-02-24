@@ -30,50 +30,6 @@ _CTRL_REG = 0x1F
 DEFAULT_TIME = (2000, 1, 1, 0, 0, 0, 5, 0, 0)
 TIME_ADJUST = True
 
-class TimeDataCorrection():
-    def __init__(self, dt_array) -> None:
-        if len(dt_array) != 7:
-            raise ValueError("There is an excess or deficiency in the given time data")
-        dt_array_a = self._digit_correction(dt_array)
-        self.bcd_array = self._bcd_encode(dt_array_a)
-        self.tm_sec = self.bcd_array[6]
-        self.tm_min = self.bcd_array[5]
-        self.tm_hour = self.bcd_array[4]
-        self.tm_wday = self._build_the_day_of_the_week(dt_array[3])
-        self.tm_mday = self.bcd_array[2]
-        self.tm_mon = self.bcd_array[1]
-        self.tm_year = self.bcd_array[0]
-    def _build_the_day_of_the_week(self, wday):
-        w = 0x01 << wday
-        w = w >> 1
-        return w
-    def _digit_correction(self, dt_array):
-        was_tuple = False
-        if type(dt_array) is tuple:
-            was_tuple = True
-            dt_array = list(dt_array)
-        for u in range(len(dt_array)):
-            lengths = len(str(dt_array[u]))
-            if lengths > 2:
-                s = str(dt_array[u])
-                t = s[lengths - 2]
-                t += s[lengths - 1]
-                dt_array[u] = int(t)
-            #print('Corrected the number of digits: {}'.format(dt_array[u]))
-        if was_tuple:
-            dt_array = tuple(dt_array)
-        return dt_array
-    def _bcd_encode(self, data):
-        a = []
-        for s in bytes(data):
-            str_s = str(s)
-            digit = len(str_s)
-            bcd = 0
-            for d in range(digit):
-                bcd += int(str_s[d-1]) << d * 4
-            a.append(bcd)
-        return a
-
 class RealTimeClockRX8900():
     def __init__(self, i2c) -> None:
         self._device = I2CDevice(i2c, _I2C_ADRESS)
@@ -144,6 +100,7 @@ class RealTimeClockRX8900():
         data = TEST_MASK & (wada << 6 & 0x40) | (usel << 5 & 0x20) | (te << 4 & 0x10) | (fsel << 2 & 0x0C) | (tsel & 0x03)
         return bytes(data)
     def _read_extension_register(self):
+        '''Update ext_reg :dict '''
         reg = self._read_from_addr(_EXTENSION_REG, 1)
         self.ext_reg['WADA'] = (reg[0] & 0x40) >> 6
         self.ext_reg['USEL'] = (reg[0] & 0x20) >> 5
@@ -177,7 +134,8 @@ class RealTimeClockRX8900():
         '''
         data = (uf << 5 & 0x20) | (tf << 4 & 0x10) | (af << 3 & 0x08) | (vlf << 1 & 0x02) | (vdet % 0x01)
         return bytes(data)
-    def _read_flag_register(self):
+    def _read_flag_register(self) -> None:
+        '''Update flg_reg :dict '''
         reg = self._read_from_addr(_FLAG_REG, 1)
         self.flg_reg['UF'] = (reg[0] & 0x20) >> 5
         self.flg_reg['TF'] = (reg[0] & 0x10) >> 4
@@ -205,6 +163,7 @@ class RealTimeClockRX8900():
         data = (csel << 6 & 0xC0) | (uie << 5 & 0x20) | (tie << 4 & 0x10) | (aie << 3 & 0x08) | (reset & 0x01)
         return bytes(data)
     def _read_control_Register(self):
+        '''Update ctl_reg :dict '''
         reg = self._read_from_addr(_CTRL_REG, 1)
         self.ctl_reg['CSEL'] = (reg[0] & 0xC0) >> 6
         self.ctl_reg['UIE'] = (reg[0] & 0x20) >> 5
