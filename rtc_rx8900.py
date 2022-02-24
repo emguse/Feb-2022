@@ -214,12 +214,19 @@ class RealTimeClockRX8900():
     def _read_single_bit(self, addr, num_bits):
         bitmask = 0x01 << num_bits
         reg = self._read_from_addr(addr, 1)
-        bits = reg & bitmask >> num_bits
+        bits = (reg & bitmask) >> num_bits
         return bits
     def _set_single_bit(self, addr, num_bits, value):
-        bitmask = ~(0x01 << num_bits) & 0xFF
-        evacuation = self._read_from_addr(addr, 1)
+        '''
+        It does not work properly with time-related registers, 
+        only with extension, control, and flag registers. (Depending on whether BCD is encoded)
         
+        num_bits: MSB 76543210 LSB'''
+        evacuation = self._read_from_addr(addr, 1)
+        bitmask = (~(0x01 << num_bits) & 0xFF) & evacuation[0]
+        value_to_set = value << num_bits
+        prepared_value = bitmask | value_to_set
+        self._write(addr, (prepared_value,))
     def datetime(self):
         t = self._bcd_to_struct(self._read_from_addr(_SEC_REG, 7))
         return t
@@ -283,7 +290,7 @@ class RealTimeClockRX8900():
             self.ctl_reg.get('AIE'), 
             True
         )
-        print(converted)
+        #print(converted)
         self._write(_CTRL_REG, ctl_reg_set)
         self._write(_SEC_REG, converted)
     def _build_the_ime_for_setting(self, st :time.struct_time):
@@ -320,17 +327,21 @@ class RealTimeClockRX8900():
                 bcd += int(str_s[d-1]) << d * 4
             a.append(bcd)
         return a
+    def test(self):
+        self._set_single_bit(0x1F, 0, False)
+
 
 def main():
     i2c = busio.I2C(board.GP9, board.GP8)
     rtc = RealTimeClockRX8900(i2c)
     TIME_ADJUST = False
     if TIME_ADJUST:
-        rtc.time_set(time.struct_time((2022, 2, 23, 12, 10, 0, 2, 0, 0)))
+        rtc.time_set(time.struct_time((2022, 2, 24, 22, 52, 0, 2, 0, 0)))
     while True:
         t = rtc.datetime()
         print('{:04}{:02}{:02}T{:02}{:02}{:02}'.format(
                 t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min ,t.tm_sec))
+        #rtc.test()
         time.sleep(3)
 
 if __name__ == "__main__":
