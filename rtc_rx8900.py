@@ -286,6 +286,9 @@ class RealTimeClockRX8900():
                 bcd += int(str_s[d-1]) << d * 4
             a.append(bcd)
         return a
+    def read_temp(self):
+        raw = self._read(1)
+        return (raw[0] * 2 - 187.19) / 3.218
     def test(self):
         self._set_single_bit(0x1F, 0, False)
 
@@ -300,6 +303,7 @@ def main():
         t = rtc.datetime()
         print('{:04}{:02}{:02}T{:02}{:02}{:02}'.format(
                 t.tm_year, t.tm_mon, t.tm_mday, t.tm_hour, t.tm_min ,t.tm_sec))
+        print(rtc.read_temp())
         #rtc.test()
         time.sleep(3)
 
