@@ -4,7 +4,7 @@ import time
 from adafruit_bus_device.i2c_device import I2CDevice
 
 '''
-- 2022/02/22 ver.0.01
+- 2022/02/28 ver.0.02
 - Author : emguse
 '''
 
@@ -12,6 +12,9 @@ _I2C_ADRESS=0x32
 _TSTA_1S = 1.0 # Ta=25degC:1sec 
 _TSTA_3S = 3.0 # Ta=-40to85degC:3sec
 
+_MIN_ALM_REG = 0x08
+_MIN_ALM_REG = 0x09
+_W_D_ALM_REG = 0x0A
 _SEC_REG = 0x10
 _MIN_REG = 0x11
 _HOUR_REG = 0x12
@@ -240,7 +243,7 @@ class RealTimeClockRX8900():
         '''
         Receives struct_time, corrects the number and converts it to BCD.
         '''
-        converted =  self._build_the_ime_for_setting(st)
+        converted =  self._build_the_time_for_setting(st)
         self._read_control_Register()
         ctl_reg_set = self._build_control_Register(
             self.ctl_reg.get('CSEL'), 
@@ -252,7 +255,7 @@ class RealTimeClockRX8900():
         #print(converted)
         self._write(_CTRL_REG, ctl_reg_set)
         self._write(_SEC_REG, converted)
-    def _build_the_ime_for_setting(self, st :time.struct_time):
+    def _build_the_time_for_setting(self, st :time.struct_time):
         if isinstance(st, time.struct_time) != True:
             raise ValueError("Data that is not `time.struct_time` was given")
         year = self._two_digit_extraction([st.tm_year])
@@ -289,8 +292,22 @@ class RealTimeClockRX8900():
     def read_temp(self):
         raw = self._read(1)
         return (raw[0] * 2 - 187.19) / 3.218
+    def set_min_alm_enable(self):
+        evacuation = self._read_from_addr(_MIN_ALM_REG, 1)
+        data = evacuation & 0x80
+        self._write(_MIN_ALM_REG, data)
+    def set_min_alm_disable(self):
+        evacuation = self._read_from_addr(_MIN_ALM_REG, 1)
+        data = evacuation | 0x7F
+        self._write(_MIN_ALM_REG, data)
+    def set_alm_min(self, min):
+        bcd =  self._bcd_encode([min])
+        bitarray = self._read_from_addr(_MIN_ALM_REG, 1)
+        evacuation = bitarray & 0x80
+        data = evacuation | bcd
+        self._write(_MIN_ALM_REG, data)
     def test(self):
-        self._set_single_bit(0x1F, 0, False)
+        self.set_alm_min(59)
 
 
 def main():
