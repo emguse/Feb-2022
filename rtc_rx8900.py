@@ -4,7 +4,7 @@ import time
 from adafruit_bus_device.i2c_device import I2CDevice
 
 '''
-- 2022/02/28 ver.0.02
+- 2022/03/01 ver.0.03
 - Author : emguse
 '''
 
@@ -13,7 +13,7 @@ _TSTA_1S = 1.0 # Ta=25degC:1sec
 _TSTA_3S = 3.0 # Ta=-40to85degC:3sec
 
 _MIN_ALM_REG = 0x08
-_MIN_ALM_REG = 0x09
+_HOUR_ALM_REG = 0x09
 _W_D_ALM_REG = 0x0A
 _SEC_REG = 0x10
 _MIN_REG = 0x11
@@ -294,11 +294,11 @@ class RealTimeClockRX8900():
         return (raw[0] * 2 - 187.19) / 3.218
     def set_min_alm_enable(self):
         evacuation = self._read_from_addr(_MIN_ALM_REG, 1)
-        data = evacuation & 0x80
+        data = evacuation | 0x80
         self._write(_MIN_ALM_REG, data)
     def set_min_alm_disable(self):
         evacuation = self._read_from_addr(_MIN_ALM_REG, 1)
-        data = evacuation | 0x7F
+        data = evacuation & 0x7F
         self._write(_MIN_ALM_REG, data)
     def set_alm_min(self, min):
         bcd =  self._bcd_encode([min])
@@ -306,6 +306,20 @@ class RealTimeClockRX8900():
         evacuation = bitarray & 0x80
         data = evacuation | bcd
         self._write(_MIN_ALM_REG, data)
+    def set_hour_alm_enable(self):
+        evacuation = self._read_from_addr(_HOUR_ALM_REG, 1)
+        data = evacuation | 0x80
+        self._write(_MIN_ALM_REG, data)
+    def set_hour_alm_disable(self):
+        evacuation = self._read_from_addr(_HOUR_ALM_REG, 1)
+        data = evacuation & 0x7F
+        self._write(_MIN_ALM_REG, data)
+    def set_alm_hour(self, hour):
+        bcd =  self._bcd_encode([hour])
+        bitarray = self._read_from_addr(_HOUR_ALM_REG, 1)
+        evacuation = bitarray & 0x80
+        data = evacuation | bcd
+        self._write(_HOUR_ALM_REG, data)
     def test(self):
         self.set_alm_min(59)
 
