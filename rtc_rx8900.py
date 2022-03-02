@@ -4,7 +4,7 @@ import time
 from adafruit_bus_device.i2c_device import I2CDevice
 
 '''
-- 2022/03/01 ver.0.03
+- 2022/03/02 ver.0.04
 - Author : emguse
 '''
 
@@ -320,6 +320,29 @@ class RealTimeClockRX8900():
         evacuation = bitarray & 0x80
         data = evacuation | bcd
         self._write(_HOUR_ALM_REG, data)
+    def set_alm_mode_week(self):
+        bitarray = self._read_from_addr(_EXTENSION_REG, 1)
+        data = bitarray & 0x7F
+        self._write(_EXTENSION_REG, data)
+    def set_alm_mode_day(self):
+        bitarray = self._read_from_addr(_EXTENSION_REG, 1)
+        data = bitarray | 0x80
+        self._write(_EXTENSION_REG, data)
+    def set_week_alm(self, week):
+        if week == 6:
+            week_bit = 0x01
+        else:
+            week_bit = 0x01 << (week + 1)
+        bitarray = self._read_from_addr(_W_D_ALM_REG, 1)
+        evacuation = bitarray & 0x80
+        data = week_bit | evacuation
+        self._write(_W_D_ALM_REG, data)
+    def set_day_alm(self, day):
+        bcd =  self._bcd_encode([day])
+        bitarray = self._read_from_addr(_W_D_ALM_REG, 1)
+        evacuation = bitarray & 0x80
+        data = evacuation | bcd
+        self._write(_W_D_ALM_REG, data)
     def test(self):
         self.set_alm_min(59)
 
