@@ -4,7 +4,7 @@ import time
 from adafruit_bus_device.i2c_device import I2CDevice
 
 '''
-- 2022/03/02 ver.0.04
+- 2022/03/03 ver.0.05
 - Author : emguse
 '''
 
@@ -343,6 +343,53 @@ class RealTimeClockRX8900():
         evacuation = bitarray & 0x80
         data = evacuation | bcd
         self._write(_W_D_ALM_REG, data)
+    def set_timer_counter(self, timer):
+        '''
+        set counter
+        0 to 4095 
+        '''
+        if timer < 4095:
+            timer = 4095
+            print("Timer out of range")
+        tc0 = timer & 0x0FF
+        tc1 = timer >> 8
+        self._write(_TIMER_COUNTER_REG_0, tc0)
+        self._write(_TIMER_COUNTER_REG_1, tc1)
+    def set_timer_select(self, tsel):
+        '''
+        timer counter clock souce select
+        - TSEL = 0: 4096 Hz
+        - TSEL = 1: 64 Hz
+        - TSEL = 2: 1 sec
+        - TSEL = 3: 1 min
+        '''
+        self._read_extension_register()
+        self.ext_reg['TSEL'] = tsel
+        self._build_extension_register(
+            self.ext_reg['WADA'], self.ext_reg['USEL'], self.ext_reg['TE'], 
+            self.ext_reg['FSEL'], self.ext_reg['TSEL'])
+    def set_timer_enable(self, te):
+        '''
+        - TE = 0: Timer Desable (Stop count down)
+        - TE = 1: Timer Enable (Start count down)
+        '''
+        self._read_extension_register()
+        self.ext_reg['TE'] = te
+        ext_reg_set = self._build_extension_register(
+            self.ext_reg['WADA'], self.ext_reg['USEL'], self.ext_reg['TE'], 
+            self.ext_reg['FSEL'], self.ext_reg['TSEL'])
+        self._write(_EXTENSION_REG, ext_reg_set)
+    def set_timer_interrupt(self, tie):
+        '''
+        - TIE = 0: Desable timer interrupt
+        - TIE = 1: Enable timer interrupt
+        '''
+        self._read_control_Register()
+        self.ctl_reg['TIE'] = tie
+        ctl_reg_set = self._build_control_Register(
+            self.ext_reg['CSEL'], self.ext_reg['UIE'], self.ext_reg['TIE'], 
+            self.ext_reg['AIE'], self.ext_reg['RESET'])
+        self._write(_CTRL_REG, ctl_reg_set)
     def test(self):
         self.set_alm_min(59)
 
